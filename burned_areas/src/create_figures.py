@@ -135,13 +135,125 @@ def create_umap_figure(
         print(f"Figure saved to: {save_path}")
 
 
+def create_label_efficiency_figure(
+    results_path: Union[str, Path] = None,
+    save_path: Optional[Union[str, Path]] = None,
+    dpi: int = 300,
+) -> None:
+    """
+    Create and optionally save a label efficiency comparison figure from saved results.
+
+    Parameters
+    ----------
+    results_path : str or Path, optional
+        Path to the directory containing the training results. If None, uses DATA_DIR.
+    save_path : str or Path, optional
+        Path to save the figure. If None, only displays the plot.
+    dpi : int
+        Resolution for saved figure (default: 300)
+    """
+    if results_path is None:
+        results_path = DATA_DIR
+    input_path = Path(results_path)
+
+    # Load training results from npz
+    data = np.load(input_path / "training_results.npz")
+
+    ratios = data["ratios"].tolist()
+    sample_counts = data["sample_counts"].tolist()
+
+    # Reconstruct scores dictionary
+    scores = {}
+    for key in data.keys():
+        if key.startswith("scores_"):
+            approach_name = (
+                key.replace("scores_", "").replace("_", " ").replace(" ", "-")
+            )
+            # Restore original names
+            if "tessera" in approach_name.lower():
+                approach_name = "TESSERA"
+            elif "gse" in approach_name.lower():
+                approach_name = "GSE"
+            elif (
+                "task" in approach_name.lower() and "specific" in approach_name.lower()
+            ):
+                approach_name = "Task-Specific Composite"
+
+            scores[approach_name] = data[key].tolist()
+
+    print(f"Training results loaded from {input_path / 'training_results.npz'}")
+
+    # Create the plot
+    visualize.plot_label_efficiency_comparison(ratios, scores, sample_counts)
+
+    # Save if path provided
+    if save_path is not None:
+        import matplotlib.pyplot as plt
+
+        plt.savefig(save_path, dpi=dpi, bbox_inches="tight")
+        print(f"Label efficiency figure saved to: {save_path}")
+
+
+def create_comparison_maps_figure(
+    results_path: Union[str, Path] = None,
+    save_path: Optional[Union[str, Path]] = None,
+    dpi: int = 300,
+) -> None:
+    """
+    Create and optionally save a comparison maps figure from saved results.
+
+    Parameters
+    ----------
+    results_path : str or Path, optional
+        Path to the directory containing the comparison map data. If None, uses DATA_DIR.
+    save_path : str or Path, optional
+        Path to save the figure. If None, only displays the plot.
+    dpi : int
+        Resolution for saved figure (default: 300)
+    """
+    if results_path is None:
+        results_path = DATA_DIR
+    input_path = Path(results_path)
+
+    # Load comparison map data from npz
+    data = np.load(input_path / "comparison_maps.npz")
+
+    gt_A = data["gt_A"]
+    pred_A = data["pred_A"]
+    gt_B = data["gt_B"]
+    pred_B = data["pred_B"]
+
+    print(f"Comparison maps loaded from {input_path / 'comparison_maps.npz'}")
+
+    # Create the plot
+    visualize.plot_comparison_maps(gt_A, pred_A, gt_B, pred_B)
+
+    # Save if path provided
+    if save_path is not None:
+        import matplotlib.pyplot as plt
+
+        plt.savefig(save_path, dpi=dpi, bbox_inches="tight")
+        print(f"Comparison maps figure saved to: {save_path}")
+
+
 if __name__ == "__main__":
     # Create figures directory if it doesn't exist
     FIGURES_DIR.mkdir(exist_ok=True)
-    
+
+    # Create UMAP figure
     create_umap_figure(
         results_path=DATA_DIR,
         save_path=FIGURES_DIR / "umap_burned_areas.png",
         point_size=10,
         figsize=(10, 8),
+    )
+
+    # Create label efficiency figure
+    create_label_efficiency_figure(
+        save_path=FIGURES_DIR / "label_efficiency_comparison.png",
+    )
+
+    # Create comparison maps figure
+    create_comparison_maps_figure(
+        save_path=FIGURES_DIR / "comparison_maps.png",
     )
